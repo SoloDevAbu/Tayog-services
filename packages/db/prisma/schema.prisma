@@ -1,0 +1,1537 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PublisherType {
+  USER
+  PAGE
+}
+
+model User {
+  id                     String                  @id @default(uuid())
+  name                   String?
+  uName                  String?                 @unique
+  email                  String?                 @unique
+  emailVerified          DateTime?
+  image                  String?
+  role                   String?
+  institute              String?
+  location               String?
+  overview               String?                 @db.Text
+  status                 Int?
+  mentorStatus           Boolean                 @default(false)
+  verifiedMentor         Boolean                 @default(false)
+  userVerified           Boolean                 @default(false)
+  joinedOn               DateTime?
+  isReported             Boolean                 @default(false)
+  accountStatus          Int                     @default(0)
+  link1                  String?
+  coverImg               String?
+  link2                  String?
+  link3                  String?
+  link4                  String?
+  scholarUrl             String?
+  isResumeUploaded       Boolean                 @default(false)
+  isProfileBuilderUsed   Boolean                 @default(false)
+  fcmToken               String?
+  isDeleted              Boolean                 @default(false)
+  deletedAt              DateTime?               @db.Timestamptz(6)
+  likes                  Like[]
+  triggeredNotifications Notification[]          @relation("TriggeredBy")
+  notifications          Notification[]          @relation("UserNotifications")
+  PageOwnership          PageOwnership[]
+  PageAssociation        PeopleAssociation[]
+  accounts               Account[]
+  comments               Comment[]
+  educations             Education[]
+  experiences            Experience[]
+  applications           MentorshipApplication[]
+  projects               Project[]
+  registerSessions       RegisterSessions[]
+  savedMentor            SavedMentor[]
+  savedThoughts          SavedThought[]
+  sessions               Sessions[]
+  Thoughts               Thoughts[]
+  userHistories          UserHistory[]
+  registeredEvents       RegisteredEvent[]
+  userInterests          UserInterest[]
+  userSkills             UserSkills[]
+  patentInventors        PatentInventors[]
+  awards                 Awards[]
+  testScore              TestScores[]
+  // PageOwnership PageOwnership[]
+  // PageEmployee PageEmployee[]
+  // Application Application[]
+  // UserHistory UserHistory[]
+  // postLike               PostLike[]
+  // postComment            PostComment[]
+  // reportPost             ReportPost[]
+  // SavedPost              SavedPost[]
+  certificate            Certificate[]
+  course                 Courses[]
+  userLanguage           UserLanguage[]
+
+  opportunityApplication OpportunityApplicants[]
+  savedOpportunities     SavedOpportunity[]
+
+  @@map("users")
+}
+
+model UserInterest {
+  id         Int      @id @default(autoincrement())
+  userId     String   @db.VarChar(40)
+  interestId Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interest   Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, interestId])
+  @@map("userInterests")
+}
+
+model Interest {
+  id        Int      @id @default(autoincrement())
+  label     String   @db.VarChar(400)
+  domain    String   @db.VarChar(200)
+  createdAt DateTime @default(now())
+
+  userInterests UserInterest[]
+
+  @@index([domain])
+  @@map("interests")
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verificationTokens")
+}
+
+model UserHistory {
+  id            Int      @id @default(autoincrement())
+  userId        String   @db.VarChar(40)
+  review        String?  @db.VarChar(800)
+  date          DateTime @default(now())
+  accountStatus Int      @db.SmallInt
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@map("userHistories")
+}
+
+model Institute {
+  id    String @id @default(uuid())
+  name  String
+  image String
+
+  @@map("institutes")
+}
+
+model Thoughts {
+  thoughtid     String         @id @default(uuid())
+  userId        String
+  title         String
+  content       String
+  abstract      String?        @db.VarChar(550)
+  yturl         String?        @db.VarChar(400)
+  tags          String[]
+  created_at    DateTime       @default(now())
+  images        String[]
+  access        String         @default("public") @db.VarChar(20)
+  isDraft       Boolean        @default(false)
+  schedule      DateTime?
+  likes         Like[]
+  notifications Notification[] @relation("Thought")
+  comments      Comment[]
+  savedBy       SavedThought[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("thoughts")
+}
+
+model Experience {
+  id               String   @id @default(uuid())
+  title            String
+  employmentType   String?
+  discipline       String?
+  organizationName String?
+  location         String?
+  locationType     String?
+  positionActive   Boolean?
+  initiationMonth  Int?     @db.SmallInt
+  initiationYear   Int?     @db.Integer
+  completionMonth  Int?     @db.SmallInt
+  completionYear   Int?     @db.Integer
+  description      String?  @db.Text
+  createdAt        DateTime @default(now())
+
+  userId String @db.VarChar(40)
+  user   User   @relation(fields: [userId], references: [id])
+
+  skills     ExperienceSkill[]
+  awards     Awards[]
+  testScores TestScores[]
+  course     Courses[]
+
+  @@map("experience")
+}
+
+model ExperienceSkill {
+  experienceId String
+  skillId      Int
+
+  experience Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  skill      UserSkills @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([experienceId, skillId])
+  @@map("experienceSkills")
+}
+
+model Education {
+  id              String   @id @default(uuid())
+  institute       String
+  degree          String
+  field           String?
+  location        String?
+  grades          String?
+  positionActive  Boolean?
+  initiationMonth Int?     @db.SmallInt
+  initiationYear  Int?     @db.Integer
+  completionMonth Int?     @db.SmallInt
+  completionYear  Int?     @db.Integer
+  description     String?  @db.Text
+  createdAt       DateTime @default(now())
+  userId          String   @db.VarChar(40)
+  user            User     @relation(fields: [userId], references: [id])
+
+  skills     EducationSkill[]
+  awards     Awards[]
+  testScores TestScores[]
+  course     Courses[]
+
+  @@map("education")
+}
+
+model EducationSkill {
+  educationId String
+  skillId     Int
+
+  education Education  @relation(fields: [educationId], references: [id], onDelete: Cascade)
+  skill     UserSkills @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([educationId, skillId])
+  @@map("educationSkills")
+}
+
+model Project {
+  id              String   @id @default(uuid())
+  title           String
+  description     String?
+  projectUrl      String?
+  positionActive  Boolean?
+  initiationMonth Int?     @db.SmallInt
+  initiationYear  Int?     @db.Integer
+  completionMonth Int?     @db.SmallInt
+  completionYear  Int?     @db.Integer
+  technologies    String[]
+  teamSize        Int?
+  createdAt       DateTime @default(now())
+
+  userId String @db.VarChar(40)
+  user   User   @relation(fields: [userId], references: [id])
+
+  skills ProjectSkill[]
+
+  @@map("projects")
+}
+
+model ProjectSkill {
+  projectId String
+  skillId   Int
+
+  project Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill   UserSkills @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, skillId])
+  @@map("projectSkills")
+}
+
+model UserSkills {
+  id        Int      @id @default(autoincrement())
+  skill     String   @db.VarChar(100)
+  createdAt DateTime @default(now())
+
+  userId String @db.VarChar(40)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projects    ProjectSkill[]
+  experiences ExperienceSkill[]
+  educations  EducationSkill[]
+
+  @@unique([userId, skill])
+  @@index([skill])
+  @@map("userSkills")
+}
+
+model UserLanguage {
+  proficiency Proficiency?
+  createdAt   DateTime     @default(now())
+
+  userId String @db.VarChar(40)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  languageId Int
+  language   Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, languageId])
+  @@map("userLanguage")
+}
+
+model Patents {
+  id            String    @id @default(cuid())
+  title         String    @db.VarChar(300)
+  applicationNo String    @db.VarChar(20)
+  isPending     Boolean?
+  fillingDate   DateTime? @db.Date
+  url           String?   @db.VarChar(200)
+  description   String?   @db.Text
+  createdAt     DateTime  @default(now())
+
+  inventor PatentInventors[]
+
+  @@map("patents")
+}
+
+model PatentInventors {
+  patentId String @db.VarChar(40)
+  userId   String @db.VarChar(40)
+
+  patent Patents @relation(fields: [patentId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([patentId, userId])
+  @@map("patentInventors")
+}
+
+model Awards {
+  id          String   @id @default(cuid())
+  title       String   @db.VarChar(300)
+  issuer      String?  @db.VarChar(300)
+  month       Int?     @db.SmallInt
+  year        Int?     @db.Integer
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  userId String @db.VarChar(40)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  educationId String?    @db.VarChar(40)
+  education   Education? @relation(fields: [educationId], references: [id], onDelete: Cascade)
+
+  experienceId String?     @db.VarChar(40)
+  experience   Experience? @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@map("awards")
+}
+
+model TestScores {
+  id          String   @id @default(cuid())
+  title       String   @db.VarChar(300)
+  score       String   @db.VarChar(25)
+  month       Int?     @db.SmallInt
+  year        Int?     @db.Integer
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  userId String @db.VarChar(40)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  educationId String?    @db.VarChar(40)
+  education   Education? @relation(fields: [educationId], references: [id], onDelete: Cascade)
+
+  experienceId String?     @db.VarChar(40)
+  experience   Experience? @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@map("testScores")
+}
+
+model Certificate {
+  id                  String   @id @default(cuid())
+  name                String   @db.VarChar(300)
+  issuingOrganization String   @db.VarChar(300)
+  issueMonth          Int      @db.SmallInt
+  issueYear           Int      @db.Integer
+  expirationMonth     Int      @db.SmallInt
+  expirationYear      Int      @db.Integer
+  credentialId        String   @db.VarChar(100)
+  credentailUrl       String   @db.VarChar(200)
+  createdAt           DateTime @default(now())
+
+  userId String @db.VarChar(40)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("certificates")
+}
+
+model Courses {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(300)
+  code      String?  @db.VarChar(30)
+  createdAt DateTime @default(now())
+
+  userId String @db.VarChar(40)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  educationId String?    @db.VarChar(40)
+  education   Education? @relation(fields: [educationId], references: [id], onDelete: Cascade)
+
+  experienceId String?     @db.VarChar(40)
+  experience   Experience? @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@map("courses")
+}
+
+model Language {
+  id    Int    @id @default(autoincrement())
+  title String @db.VarChar(200)
+
+  userLanguage UserLanguage[]
+
+  @@map("languages")
+}
+
+enum Proficiency {
+  ELEMENTARY
+  LIMITED
+  PROFESSIONAL
+  FULL
+  NATIVE
+}
+
+model MentorshipApplication {
+  id              Int      @id @default(autoincrement())
+  userId          String   @db.VarChar(40)
+  motivation      String?  @db.VarChar(800)
+  agreeToShow     Boolean  @default(true)
+  acceptCondition Boolean  @default(true)
+  appliedDate     DateTime @default(now())
+  success         Boolean  @default(false)
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@map("mentorshipApplication")
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  name      String?  @db.VarChar(60)
+  email     String?  @db.VarChar(100)
+  section   String?  @db.VarChar(60)
+  feedback  String?  @db.VarChar(550)
+  marked    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model SavedThought {
+  id        String   @id @default(uuid())
+  userId    String
+  thoughtId String
+  createdAt DateTime @default(now())
+  thought   Thoughts @relation(fields: [thoughtId], references: [thoughtid])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, thoughtId])
+  @@map("savedThoughts")
+}
+
+model Like {
+  id        String    @id @default(uuid())
+  userId    String
+  thoughtId String?
+  postId    String?
+  createdAt DateTime  @default(now())
+  thought   Thoughts? @relation(fields: [thoughtId], references: [thoughtid], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@unique([userId, thoughtId])
+}
+
+model Comment {
+  commentId String    @id @default(uuid())
+  userId    String
+  thoughtId String?
+  postId    String?
+  content   String    @db.VarChar(1000)
+  createdAt DateTime  @default(now())
+  thought   Thoughts? @relation(fields: [thoughtId], references: [thoughtid], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Notification {
+  id            Int              @id @default(autoincrement())
+  userId        String
+  type          NotificationType
+  message       String
+  entityId      Int?
+  entityType    EntityType?
+  thoughtId     String?
+  isRead        Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  pushSent      Boolean          @default(false)
+  pushSentAt    DateTime?
+  triggeredById String?
+  thought       Thoughts?        @relation("Thought", fields: [thoughtId], references: [thoughtid])
+  triggeredBy   User?            @relation("TriggeredBy", fields: [triggeredById], references: [id])
+  user          User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum PageTypes {
+  PAGE
+  SUBPAGE
+  SUBSUBPAGE
+}
+
+enum Status {
+  SUCCESS
+  PENDING
+  CANCEL
+  REFUNDINITIATED
+  REFUNDED
+}
+
+model Page {
+  id           String    @id @default(uuid())
+  uName        String
+  title        String
+  subheading   String?
+  location     String?
+  creatorName  String
+  description  String?   @db.Text
+  logo         String?   @db.VarChar(150)
+  bannerImage  String?   @db.VarChar(150)
+  officialLink String?
+  employeeSize String?   @db.VarChar(20)
+  type         PageTypes @default(PAGE)
+
+  pageAccess        PageOwnership[] // access of page to people
+  associatedPeoples PeopleAssociation[] // People associated with this Page/ alumini
+  opportunities     Opportunity[]       @relation("PageOpportunities") // Opportunities posted by the Page
+  associatedOrgs    PageAssociation[] // Other associated organizations page to page mapping
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pageAssociation PageAssociation[] @relation("AssociatedOrg")
+  Events          Events[]          @relation("PageEvents")
+
+  @@map("pages")
+}
+
+model PageOwnership {
+  id       String  @id @default(uuid())
+  userId   String
+  pageId   String  @db.VarChar(40) // ID of the page
+  role     Role // Enum to define roles as "CO_OWNER" or "EDITOR"
+  isActive Boolean @default(true) // check if the user is active for the role in the page
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  addedAt DateTime  @default(now())
+  leftOn  DateTime?
+
+  @@map("pageOwnership")
+}
+
+model PeopleAssociation {
+  userId   String    @db.VarChar(40)
+  pageId   String    @db.VarChar(40) // ID of the page
+  joinedOn DateTime  @default(now())
+  leftOn   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pageId])
+  @@map("peopleAssociation")
+}
+
+model PageAssociation {
+  id           String @id @default(cuid())
+  pageId       String @db.VarChar(40)
+  associatedId String @db.VarChar(40)
+
+  joinedOn   DateTime  @default(now())
+  leftOn     DateTime?
+  associated Page      @relation("AssociatedOrg", fields: [associatedId], references: [id], onDelete: Cascade)
+  page       Page      @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, associatedId])
+  @@map("pageAssociation")
+}
+
+model Follow {
+  followerId   String
+  followerType PublisherType
+
+  followingId   String
+  followingType PublisherType
+
+  isNotify  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([followerId, followerType, followingId, followingType])
+  @@index([followingId, followingType])
+  @@index([followerId, followerType])
+  @@map("follows")
+}
+
+model AssociatesRequests {
+  id              String         @id @default(cuid())
+  requestingEmail String?        @db.VarChar(100)
+  requestedToId   String?
+  requestedToType PublisherType?
+  requestedById   String
+  requestedByType PublisherType
+  status          Status
+  requestedDate   DateTime       @default(now())
+  responseDate    DateTime?
+
+  @@map("associatesRequests")
+}
+
+model OfferCode {
+  pageId String @db.VarChar(40)
+  code   String @db.VarChar(20)
+
+  @@unique([pageId, code])
+  @@map("offerCode")
+}
+
+model Posts {
+  id        String   @id @default(cuid())
+  contentId String   @db.VarChar(30)
+  postType  PostType @default(SIMPLE)
+  createdAt DateTime @default(now())
+
+  @@index([postType, createdAt])
+  @@map("posts")
+}
+
+model SimplePost {
+  id             String         @id @default(cuid())
+  body           String?
+  visibility     Visibility     @default(PUBLIC)
+  commentControl CommentControl @default(ANYONE)
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime       @default(now())
+  isDraft        Boolean        @default(false)
+  updatedAt      DateTime       @updatedAt
+  flag           Boolean        @default(false)
+  likeCount      Int            @default(0)
+  commentCount   Int            @default(0)
+  isFeatured     Boolean        @default(false)
+  views          Int            @default(0)
+  deletedAt      DateTime?
+  repost         Repost[]
+
+  @@index([likeCount])
+  @@index([commentCount])
+  @@map("simplePost")
+}
+
+model Articles {
+  id             String         @id @default(cuid())
+  body           String?
+  title          String         @db.VarChar(200)
+  content        String
+  thumbnail      String?        @db.VarChar(80)
+  commentControl CommentControl @default(ANYONE)
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime       @default(now())
+  isDraft        Boolean        @default(false)
+  updatedAt      DateTime       @updatedAt
+  flag           Boolean        @default(false)
+  yturl          String?        @db.VarChar(400)
+  isFeatured     Boolean        @default(false)
+  views          Int            @default(0)
+  deletedAt      DateTime?
+
+  @@map("articles")
+}
+
+model Repost {
+  id           String      @id @default(cuid())
+  simplePostId String?     @db.VarChar(30)
+  body         String?
+  visibility   Visibility  @default(PUBLIC)
+  scheduledAt  DateTime?
+  publishedAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  flag         Boolean     @default(false)
+  postType     PostType
+  deletedAt    DateTime?
+  simplePost   SimplePost? @relation(fields: [simplePostId], references: [id], onDelete: Cascade, map: "fk_repost_simplePost")
+
+  @@index([createdAt])
+  @@map("repost")
+}
+
+model PostBy {
+  id            String        @id @default(cuid())
+  entityId      String        @db.VarChar(40)
+  publisherType PublisherType
+  postId        String        @db.VarChar(40)
+  postType      PostType      @default(SIMPLE)
+  publishedAt   DateTime?
+
+  @@map("postBy")
+}
+
+model Media {
+  postId    String    @db.VarChar(40)
+  postType  PostType  @default(SIMPLE)
+  type      MediaType
+  key       String    @db.VarChar(80)
+  sortOrder Int       @default(0)
+
+  @@unique([postId, key])
+  @@map("postMedia")
+}
+
+model PostLike {
+  entityId   String        @db.VarChar(40)
+  entityType PublisherType
+  postId     String        @db.VarChar(30)
+  postType   PostType
+  createdAt  DateTime      @default(now())
+
+  @@unique([entityId, postId])
+  @@index([postId, createdAt])
+  @@map("postLike")
+}
+
+model PostComment {
+  id             String           @id @default(cuid())
+  entityId       String           @db.VarChar(40)
+  entityType     PublisherType
+  postId         String           @db.VarChar(30)
+  postType       PostType
+  content        String
+  isApproved     Boolean          @default(true)
+  imageKey       String?          @db.VarChar(80)
+  createdAt      DateTime         @default(now())
+  postSubComment PostSubComment[]
+
+  @@index([postId, createdAt])
+  @@index([entityId, postId])
+  @@map("postComment")
+}
+
+model PostSubComment {
+  id            String        @id @default(cuid())
+  entityId      String        @db.VarChar(40)
+  entityType    PublisherType
+  postId        String        @db.VarChar(30)
+  postType      PostType
+  postCommentId String        @db.VarChar(30)
+  content       String
+  isApproved    Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  comment       PostComment   @relation(fields: [postCommentId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([postCommentId])
+  @@map("postSubComment")
+}
+
+model Hashtag {
+  id        String        @id @default(cuid())
+  name      String        @unique @db.VarChar(100)
+  createdAt DateTime      @default(now())
+  posts     PostHashtag[]
+
+  @@index([name])
+  @@map("hashtags")
+}
+
+model PostHashtag {
+  id        String  @id @default(cuid())
+  hashtagId String
+  hashtag   Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
+  postId   String   @db.VarChar(40)
+  postType PostType @default(SIMPLE)
+
+  @@index([hashtagId])
+  @@index([postId])
+  @@map("postHashtags")
+}
+
+// ----------- Opportunity related models ----------------
+
+model Opportunity {
+  id              String    @id @unique @default(uuid())
+  role            String?
+  department      String?
+  location        String?
+  stipend         String?
+  title           String?
+  description     String?   @db.Text
+  publishedAt     DateTime? @db.Timestamptz
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime? @updatedAt
+  regStartDate    DateTime  @db.Timestamptz
+  regEndDate      DateTime  @db.Timestamptz
+  clicks          Int?      @default(0)
+  vacancies       Int       @db.Integer
+  maxParticipants Int       @db.Integer
+  isTermsAccept   Boolean   @default(true)
+  isActive        Boolean   @default(false)
+
+  pageId String? @db.VarChar(40) // ID of the page
+  page   Page?   @relation("PageOpportunities", fields: [pageId], references: [id], onDelete: Cascade)
+
+  publishedBy                    String                   @db.VarChar(40) // this is which page created that opportunity
+  publisherType                  PublisherType
+  createdByUser                  String                   @db.VarChar(40)
+  requiredSummaryDocument        SummaryDocs?
+  requiredIdentificationDocument IdentificationDocs?
+  reservationDocs                ReservationDocs?
+  academicDocs                   AcademicDocs?
+  professionDocs                 ProfessionDocs?
+  financialDocs                  FinancialDocs?
+  externalLink                   OpportunityExternalLink?
+  opportunityTransaction         OpportunityTransaction[]
+  opportunityApplication         OpportunityApplicants[]
+  savedBy                        SavedOpportunity[]
+
+  @@map("opportunities")
+}
+
+model OpportunityExternalLink {
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  type          String      @db.VarChar(40)
+  link          String      @db.VarChar(250)
+
+  @@unique([opportunityId])
+  @@index([opportunityId])
+  @@map("opportunityExternalLink")
+}
+
+model SummaryDocs {
+  cv               Boolean @default(false)
+  portfolio        Boolean @default(false)
+  sops             Boolean @default(false)
+  lor              Boolean @default(false)
+  researchProposal Boolean @default(false)
+  coverLetter      Boolean @default(false)
+  required         Int     @db.SmallInt
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  @@unique([opportunityId])
+  @@index([opportunityId])
+  @@map("summaryDocs")
+}
+
+model IdentificationDocs {
+  aadhar           Boolean @default(false)
+  pan              Boolean @default(false)
+  drivingLicence   Boolean @default(false)
+  voterId          Boolean @default(false)
+  passport         Boolean @default(false)
+  birthCertificate Boolean @default(false)
+  nationalId       Boolean @default(false)
+  pci              Boolean @default(false)
+  visa             Boolean @default(false)
+  workPermit       Boolean @default(false)
+  required         Int     @db.SmallInt
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  @@unique([opportunityId])
+  @@index([opportunityId])
+  @@map("identificationDocs")
+}
+
+model ReservationDocs {
+  cast     Boolean @default(false)
+  ews      Boolean @default(false)
+  pwd      Boolean @default(false)
+  income   Boolean @default(false)
+  domicile Boolean @default(false)
+  required Int     @db.SmallInt
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  @@unique([opportunityId])
+  @@index([opportunityId])
+  @@map("reservationDocs")
+}
+
+model AcademicDocs {
+  tenthMarksheet              Boolean @default(false)
+  tenthCertificate            Boolean @default(false)
+  twelfthMarksheet            Boolean @default(false)
+  twelfthCertificate          Boolean @default(false)
+  diplomaCerficate            Boolean @default(false)
+  graduationMarksheet         Boolean @default(false)
+  graduationCertificate       Boolean @default(false)
+  pgMarksheet                 Boolean @default(false)
+  pgCertificate               Boolean @default(false)
+  phdCertificate              Boolean @default(false)
+  courseCompletionCertificate Boolean @default(false)
+  torCertificate              Boolean @default(false)
+  required                    Int     @db.SmallInt
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  @@unique([opportunityId])
+  @@index([opportunityId])
+  @@map("academicDocs")
+}
+
+model ProfessionDocs {
+  offerLetter           Boolean @default(false)
+  experienceCertificate Boolean @default(false)
+  required              Int     @db.SmallInt
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  @@unique([opportunityId])
+  @@index([opportunityId])
+  @@map("professionDocs")
+}
+
+model FinancialDocs {
+  bankPassbook  Boolean @default(false)
+  salaryDetails Boolean @default(false)
+  required      Int     @db.SmallInt
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  @@unique([opportunityId])
+  @@index([opportunityId])
+  @@map("financialDocs")
+}
+
+model OpportunityTransaction {
+  id            String             @id @default(cuid())
+  opportunityId String             @db.VarChar(40)
+  opportunity   Opportunity        @relation(fields: [opportunityId], references: [id])
+  purpose       TransactionPurpose
+  transactionId String             @db.VarChar(40)
+  transaction   Transaction        @relation(fields: [transactionId], references: [id])
+
+  @@map("oppportuityTransaction")
+}
+
+model OpportunityApplicants {
+  id String @id @default(cuid())
+
+  userId String @db.VarChar(40)
+  user   User   @relation(fields: [userId], references: [id])
+
+  opportunityId String      @db.VarChar(40)
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  cv                          String?           @db.VarChar(150)
+  portfolio                   String?           @db.VarChar(150)
+  sops                        String?           @db.VarChar(150)
+  lor                         String?           @db.VarChar(150)
+  researchProposal            String?           @db.VarChar(150)
+  coverLetter                 String?           @db.VarChar(150)
+  aadhar                      String?           @db.VarChar(150)
+  pan                         String?           @db.VarChar(150)
+  drivingLicence              String?           @db.VarChar(150)
+  voterId                     String?           @db.VarChar(150)
+  passport                    String?           @db.VarChar(150)
+  birthCertificate            String?           @db.VarChar(150)
+  nationalId                  String?           @db.VarChar(150)
+  pci                         String?           @db.VarChar(150)
+  visa                        String?           @db.VarChar(150)
+  workPermit                  String?           @db.VarChar(150)
+  cast                        String?           @db.VarChar(150)
+  ews                         String?           @db.VarChar(150)
+  pwd                         String?           @db.VarChar(150)
+  income                      String?           @db.VarChar(150)
+  domicile                    String?           @db.VarChar(150)
+  tenthMarksheet              String?           @db.VarChar(150)
+  tenthCertificate            String?           @db.VarChar(150)
+  twelfthMarksheet            String?           @db.VarChar(150)
+  twelfthCertificate          String?           @db.VarChar(150)
+  diplomaCerficate            String?           @db.VarChar(150)
+  graduationMarksheet         String?           @db.VarChar(150)
+  graduationCertificate       String?           @db.VarChar(150)
+  pgMarksheet                 String?           @db.VarChar(150)
+  pgCertificate               String?           @db.VarChar(150)
+  phdCertificate              String?           @db.VarChar(150)
+  courseCompletionCertificate String?           @db.VarChar(150)
+  torCertificate              String?           @db.VarChar(150)
+  offerLetter                 String?           @db.VarChar(150)
+  experienceCertificate       String?           @db.VarChar(150)
+  bankPassbook                String?           @db.VarChar(150)
+  salaryDetails               String?           @db.VarChar(150)
+  createdAt                   DateTime
+  applicationStatus           ApplicationStatus
+
+  @@map("opportunityApplicants")
+}
+
+model SavedOpportunity {
+  id            String      @id @default(uuid())
+  userId        String
+  opportunityId String
+  createdAt     DateTime    @default(now())
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+
+  @@unique([userId, opportunityId])
+  @@map("savedOpportunities")
+}
+
+enum ApplicationStatus {
+  PENDING
+  SHORTLISTED
+  MAYBE
+  REJECTED
+  FINAL
+}
+
+// ---------------- Session related models ----------------
+
+model Sessions {
+  id                  String                @id @default(cuid())
+  isGroupSession      Boolean
+  maxParticipant      Int                   @db.SmallInt
+  title               String                @db.VarChar(150)
+  communicationMode   Int                   @db.SmallInt
+  meetId              String?               @db.VarChar(40)
+  access              Int                   @db.SmallInt
+  sessionDateTime     DateTime              @db.Timestamptz(6)
+  duration            Int                   @db.SmallInt
+  description         String                @db.VarChar(800)
+  reschedule          Boolean               @default(false)
+  upgradation         Boolean               @default(false)
+  groupMemberCount    Int?
+  basicPrice          Int
+  groupPrice          Int?
+  agreeToTerms        Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  createdBy           String                @db.VarChar(40)
+  participantJoined   Int                   @default(0)
+  status              Int                   @db.SmallInt
+  currencyId          Int
+  visibility          Visibility            @default(PUBLIC)
+  callToken           String?               @db.VarChar(400)
+  registerSessions    RegisterSessions[]
+  reqReschduleSession ReqReschduleSession[]
+  rescheduledSession  RescheduledSessions[]
+  sessionFeedback     SessionFeedback[]
+  user                User                  @relation(fields: [createdBy], references: [id])
+  currency            Currency              @relation(fields: [currencyId], references: [id])
+
+  @@map("sessions")
+}
+
+model RegisterSessions {
+  id            String   @id @default(cuid())
+  userId        String   @db.VarChar(40)
+  sessionId     String   @db.VarChar(30)
+  bookedOn      DateTime @default(now())
+  motivation    String?  @db.VarChar(400)
+  byGroup       Boolean  @default(false)
+  bookedBy      String?  @db.VarChar(40)
+  paymentStatus Status
+  bookingStatus Status
+  transactionId String   @db.VarChar(20)
+  amount        Int
+  currencyId    Int
+  callToken     String?  @db.VarChar(400)
+  currency      Currency @relation(fields: [currencyId], references: [id])
+  sessions      Sessions @relation(fields: [sessionId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@map("registerSessions")
+}
+
+enum NotificationType {
+  FOLLOW
+  LIKE
+  COMMENT
+  MENTION
+}
+
+enum EntityType {
+  THOUGHT
+  COMMENT
+  USER
+  POST
+  PAGE
+}
+
+enum Role {
+  CO_OWNER
+  EDITOR
+  OWNER
+}
+
+enum PostType {
+  SIMPLE
+  ARTICLE
+  DOCUMENT
+  REPOST
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+  SHARELINK
+  DRAFT
+}
+
+enum CommentControl {
+  ANYONE
+  FOLLOWERSONLY
+  NOONE
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+model SessionFeedback {
+  id        Int      @id @default(autoincrement())
+  userId    String   @db.VarChar(40)
+  sessionId String   @db.VarChar(30)
+  rating    Decimal  @db.Decimal(5, 2)
+  review    String   @db.VarChar(400)
+  createdOn DateTime @default(now())
+
+  sessions Sessions @relation(fields: [sessionId], references: [id])
+
+  @@map("sessionFeedback")
+}
+
+model RescheduledSessions {
+  id             Int      @id @default(autoincrement())
+  sessionId      String   @db.VarChar(30)
+  sessionDate    DateTime
+  sessionNewDate DateTime
+  reason         String   @db.VarChar(400)
+  createdAt      DateTime @default(now())
+
+  sessions Sessions @relation(fields: [sessionId], references: [id])
+
+  @@map("rescheduledSessions")
+}
+
+model ReqReschduleSession {
+  id        Int      @id @default(autoincrement())
+  sessionId String   @db.VarChar(30)
+  userId    String   @db.VarChar(40)
+  fromDate  DateTime @db.Date()
+  toDate    DateTime @db.Date()
+  fromTime  DateTime @db.Time()
+  toTime    DateTime @db.Time()
+  reason    String   @db.VarChar(400)
+  createdAt DateTime @default(now())
+
+  sessions Sessions @relation(fields: [sessionId], references: [id])
+
+  @@map("reqReschduleSession")
+}
+
+model SavedMentor {
+  userId    String
+  mentorId  String
+  createdAt DateTime @default(now())
+
+  mentor User @relation(fields: [mentorId], references: [id])
+
+  @@unique([userId, mentorId])
+  @@map("savedMentors")
+}
+
+// --------- Event Related Model -------------
+
+model Events {
+  id               String    @id @default(cuid())
+  type             EventType
+  title            String    @db.VarChar(400)
+  startDate        DateTime  @db.Timestamptz
+  endDate          DateTime  @db.Timestamptz
+  regStartDate     DateTime  @db.Timestamptz
+  regEndDate       DateTime  @db.Timestamptz
+  bannerImageKey   String?   @db.VarChar(80)
+  eventPosterKey   String?   @db.VarChar(80)
+  description      String    @db.Text
+  isOnline         Boolean
+  sessionLink      String?
+  seat             Int       @db.Integer
+  participantCount Int       @default(0) @db.Integer
+  website          String?
+  email            String?
+  contact          String?
+  view             Int
+  isVerified       Boolean   @default(false)
+
+  // Location Details (if offline)
+  location EventLocation?
+
+  // Pricing & Payment Details
+  price         Int     @default(0) // Default Free
+  currencyId    Int
+  foreignPrice  Int     @default(0)
+  fCurrencyId   Int
+  isIncluded    Boolean
+  bankDetailsId String? @db.VarChar(30)
+  gstDetailsId  String? @db.VarChar(30)
+  isRefundable  Boolean @default(false)
+
+  // Sections & Ticketing
+  eventSection EventSection[]
+  // eventPricing       EventPricing[]
+
+  // this is the set of thing that the user have to give for registration
+  eventJoineeQuestionnaire EventJoineeQuestionnaire?
+
+  currency  Currency @relation("BaseCurrency", fields: [currencyId], references: [id])
+  fcurrency Currency @relation("ForeignCurrency", fields: [fCurrencyId], references: [id])
+
+  // Terms & Conditions
+  isTermsAccepted      Boolean
+  termsAndConditionKey String?   @db.VarChar(80) // this terms and condition is posted by the event manager in the pdf format
+  createdAt            DateTime  @default(now()) @db.Timestamptz
+  updatedAt            DateTime  @updatedAt @db.Timestamptz
+  publishedAt          DateTime? @db.Timestamptz
+
+  //entity details
+  pageId        String?       @db.VarChar(40) // ID of the page
+  page          Page?         @relation("PageEvents", fields: [pageId], references: [id])
+  publishedBy   String        @db.VarChar(40) // this is which page created that opportunity
+  publisherType PublisherType
+  createdByUser String        @db.VarChar(40)
+
+  registeredEvents RegisteredEvent[]
+  externalLink     EventExternalLink?
+  EventTransaction EventTransaction[]
+
+  @@map("events")
+}
+
+model EventExternalLink {
+  eventId String @db.VarChar(30)
+  Events  Events @relation(fields: [eventId], references: [id])
+  type    String @db.VarChar(40)
+  link    String @db.VarChar(250)
+
+  @@unique([eventId])
+  @@index([eventId])
+  @@map("eventExternalLink")
+}
+
+// Event Location for Better Address Handling
+model EventLocation {
+  address String? @db.VarChar(200)
+  country String? @db.VarChar(100)
+  city    String? @db.VarChar(100)
+  state   String? @db.VarChar(100)
+  mapLink String?
+
+  eventId String @db.VarChar(30)
+  Events  Events @relation(fields: [eventId], references: [id])
+
+  @@unique([eventId])
+  @@map("eventLocation")
+}
+
+// Event Pricing for Multi-Currency, Multi-Tier Ticketing
+// model EventPricing {
+//   id          String  @id @default(cuid())
+//   eventId     String
+//   price       Int
+//   currencyId  Int
+//   tierName    String? @db.VarChar(100) // VIP, General, Student, etc.
+
+//   event       Event    @relation(fields: [eventId], references: [id])
+//   currency    Currency @relation(fields: [currencyId], references: [id])
+
+//   @@index([eventId, currencyId])
+//   @@map("event_pricing")
+// }
+
+// Event Section (For organizing event content)
+model EventSection {
+  id          Int         @id @default(autoincrement())
+  title       String      @db.VarChar(400)
+  description String      @db.Text
+  sortOrder   Int         @default(0)
+  type        SectionType
+
+  eventId String @db.VarChar(30)
+  Events  Events @relation(fields: [eventId], references: [id])
+
+  @@map("eventSection")
+}
+
+model EventJoineeQuestionnaire {
+  firstName        Boolean
+  lastName         Boolean
+  gender           Boolean
+  maritalStatus    Boolean
+  profession       Boolean
+  organizationName Boolean
+  email            Boolean
+  phoneNo          Boolean
+  state            Boolean
+  country          Boolean
+  zipCode          Boolean
+
+  eventId String @db.VarChar(30)
+  Events  Events @relation(fields: [eventId], references: [id])
+
+  @@unique([eventId])
+  @@map("eventJoineeQuestionnaire")
+}
+
+model EventTransaction {
+  id            String             @id @default(cuid())
+  eventId       String             @db.VarChar(40)
+  event         Events             @relation(fields: [eventId], references: [id])
+  purpose       TransactionPurpose
+  transactionId String             @db.VarChar(40)
+  transaction   Transaction        @relation(fields: [transactionId], references: [id])
+
+  @@map("eventTransaction")
+}
+
+model RegisteredEvent {
+  id            String @id @default(cuid())
+  userId        String @db.VarChar(40)
+  eventId       String @db.VarChar(30)
+  bookingStatus Status
+
+  firstName        String?     @db.VarChar(200)
+  lastName         String?     @db.VarChar(200)
+  gender           Gender?
+  maritalStatus    Boolean?
+  profession       Profession?
+  organizationName String?     @db.VarChar(200)
+  email            String?     @db.VarChar(50)
+  phoneNo          String?     @db.VarChar(30)
+  state            String?     @db.VarChar(100)
+  country          String?     @db.VarChar(100)
+  zipCode          String?     @db.VarChar(100)
+  isTermsAccept    Boolean     @default(true)
+
+  event         Events      @relation(fields: [eventId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+  Transaction   Transaction @relation(fields: [transactionId], references: [id])
+  transactionId String
+
+  @@map("registeredEvent")
+}
+
+enum EventType {
+  WORKSHOPS
+  CONFERENCE
+  WEBINARS
+}
+
+enum SectionType {
+  FAQS
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHERS
+}
+
+enum Profession {
+  STUDENT
+  EMPLOYEE
+  ENTREPRENEUR
+  DESIGNER
+  ARTIST
+  MANAGER
+  RESEARCHER
+  ACCOUNTANT
+  TEACHER
+  PROFESSOR
+  PROGRAMMER
+}
+
+// -------------------------
+
+// --------- All Transaction and Bank Details related model ----------------
+
+enum SourceType {
+  OPPORTUNITY
+  EVENT
+  SESSION
+  THANKS
+  MENTORSHIP
+  COURSE
+}
+
+model Transaction {
+  id            String   @id @default(cuid())
+  transactionId String   @db.VarChar(100)
+  transactionAt DateTime @db.Timestamptz()
+
+  paymentStatus          Status
+  amount                 Int
+  currencyId             Int
+  currency               Currency                 @relation(fields: [currencyId], references: [id])
+  sourceType             SourceType
+  OpportunityTransaction OpportunityTransaction[]
+  EventTransaction       EventTransaction[]
+  RegisteredEvent        RegisteredEvent[]
+
+  @@map("transactions")
+}
+
+model Currency {
+  id        Int      @id @default(autoincrement())
+  code      String   @db.VarChar(3) // ISO currency code (e.g., USD, EUR)
+  name      String   @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions         Sessions[]
+  registerSessions RegisterSessions[]
+  baseEvents       Events[]           @relation("BaseCurrency")
+  foreignEvents    Events[]           @relation("ForeignCurrency")
+  Transaction      Transaction[]
+
+  @@unique([code], name: "uniq_currency_code")
+  @@map("currency")
+}
+
+model BankDetails {
+  id              String          @id @default(cuid())
+  accountNumber   BigInt
+  beneficiaryName String          @db.VarChar(100)
+  accountType     BankAccountType
+  ifsc            String          @db.VarChar(30)
+  entityId        String          @db.VarChar(40) // User/Page ID
+  entityType      EntityType
+  isDefault       Boolean         @default(false)
+
+  @@unique([accountNumber, ifsc])
+  @@index([entityId, entityType]) // For faster lookups based on user/page
+  @@map("bankDetails")
+}
+
+enum BankAccountType {
+  SAVINGS
+  CURRENT
+  SALARY
+  FIXED_DEPOSIT
+  RECURRING_DEPOSIT
+}
+
+enum TransactionPurpose {
+  REGISTRATION
+  DATE_INCREMENT
+  EMAIL_NOTIFICATION
+  LISTING
+}
+
+// -------- Gst Details --------
+
+model GSTDetails {
+  id               String       @id @default(cuid())
+  gstin            String       @unique @db.VarChar(15) // 15-digit unique GSTIN
+  legalName        String       @db.VarChar(150) // Registered business name
+  tradeName        String?      @db.VarChar(150) // Optional trade name
+  pan              String       @db.VarChar(10) // PAN (extracted from GSTIN)
+  stateCode        String       @db.VarChar(2) // First 2 digits of GSTIN
+  taxpayerType     TaxpayerType
+  registrationDate DateTime
+  gstStatus        GSTStatus
+
+  entityId   String     @db.VarChar(40) // User/Page/Business ID
+  entityType EntityType // Enum for User, Page, Business
+
+  @@unique([gstin, entityId])
+  @@index([entityId, entityType]) // Faster lookups
+  @@map("gstDetails")
+}
+
+enum TaxpayerType {
+  REGULAR
+  COMPOSITION
+  SEZ
+  EXPORTER
+  ECOMMERCE
+}
+
+enum GSTStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+  PROVISIONAL
+}
+
+model GSTDocuments {
+  id          String     @id @default(cuid())
+  entityId    String     @db.VarChar(40)
+  entityType  EntityType
+  gstImageUrl String     @db.VarChar(80)
+  panImageUrl String     @db.VarChar(80)
+
+  @@index([entityId, entityType])
+  @@map("gstDocuments")
+}
+
+// --------------------------------
