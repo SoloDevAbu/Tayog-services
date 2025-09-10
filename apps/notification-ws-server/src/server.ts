@@ -1,5 +1,9 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import Redis from 'ioredis';
+import path from "path";
+import dotenv from "dotenv";
+
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 const redis = new Redis(process.env.REDIS_URL!);
 const wss = new WebSocketServer({ port: 8080 });
