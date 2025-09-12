@@ -42,16 +42,18 @@ async function deleteMessage(receiptHandle: string) {
   );
 }
 
-function generateMessage(message: any) {
-  const title = message.postTitle || "your post";
+function generateMessage(payload: any) {
+  const title = payload.message || "your post";
   const truncatedTitle =
     title.length > 50 ? title.substring(0, 47) + "..." : title;
 
-  switch (message.type) {
-    case "POST_LIKE":
-      return `Someone liked your post "${truncatedTitle}"`;
-    case "POST_COMMENT":
-      return `Someone commented on your post "${truncatedTitle}"`;
+  switch (payload.type) {
+    case "LIKE":
+      return truncatedTitle;
+    case "COMMENT":
+      return truncatedTitle;
+    case "FOLLOW":
+      return title;
     default:
       return "You have a new notification";
   }
@@ -72,7 +74,7 @@ async function processMessage(message: Message) {
     await prisma.notification.create({
       data: {
         user: { connect: { id: targetUserId } },
-        type: "LIKE",
+        type: payload.type,
         message: generateMessage(payload),
         entityId: null,
         entityType: payload.triggeredByType ?? null,
@@ -83,6 +85,8 @@ async function processMessage(message: Message) {
         isRead: false,
       },
     });
+
+    console.log("Publishing to Redis channel: ", `notification:${targetUserId}`)
 
     await redis.publish(
       `notification:${targetUserId}`,
